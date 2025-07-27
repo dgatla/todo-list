@@ -5,11 +5,15 @@ import plannedTasks from "../assets/planned.svg";
 import importantTasks from "../assets/important.svg";
 import myDayTasks from "../assets/day.svg";
 import addButton from "../assets/add.svg";
+import customList from "../assets/custom.svg";
+import deleteButton from "../assets/trash.svg";
 
 class SidebarElement extends LitElement {
 
     static properties = {
         selectedList: { type: String },
+        customLists: { type: Array },
+        _showInput: { type: Boolean },
     }
 
     constructor() {
@@ -22,7 +26,8 @@ class SidebarElement extends LitElement {
             { key: "planned", label: "Planned Tasks", icon: plannedTasks },
             { key: "important", label: "Important Tasks", icon: importantTasks }
         ];
-
+        this.customLists = [];
+        this._showInput = false;
     }
 
     static styles = css`
@@ -48,7 +53,7 @@ class SidebarElement extends LitElement {
             padding: 0;
             margin: 0;
         }
-        li {
+        li, .new-input-box, .list-details {
             display: flex;
             align-items: center;
             padding: 0.5rem 1rem;
@@ -90,6 +95,19 @@ class SidebarElement extends LitElement {
         .new img {
             width: 32px;
         }
+        .hidden {
+            display: none !important;
+        }
+        #newInput{
+            border: none;
+            border-bottom: 1px solid #ccc;
+        }
+        .custom-list{
+            display: flex;
+            justify-content: space-between;
+            padding: 0;
+        }
+
     `;
 
     _handleListClick(event) {
@@ -105,6 +123,48 @@ class SidebarElement extends LitElement {
         }
     }
 
+    _handleNewListClick() {
+        this._showInput = !this._showInput;
+    }
+
+    _createNewList(e) {
+        if (e.type === "blur" || (e.type === "keydown" && e.key === "Enter")) {
+            const input = this.shadowRoot.getElementById("newInput");
+            const newListName = input.value.trim();
+            if (newListName) {
+                let newListKey = newListName.toLowerCase().replace(/\s+/g, '-');
+                if (newListKey == "untitledlist") {
+                    newListKey = crypto.getRandomValues(new Uint32Array(1))[0].toString(16);
+                }
+                this.customLists.push({ key: newListKey, label: newListName });
+                this.selectedList = newListKey;
+                input.value = "UntitledList";
+                this._showInput = false;
+                this.dispatchEvent(new CustomEvent("list-created", {
+                    detail: { newList: { key: newListKey, label: newListName } },
+                    bubbles: true,
+                    composed: true
+                }));
+            }
+        }
+    }
+
+    _deleteList(event) {
+        const listItem = event.target.closest("li");
+        if (listItem) {
+            const listKey = listItem.dataset.list;
+            if (this.selectedList === listKey) {
+                this.selectedList = "my-day";
+            }
+            this.customLists = this.customLists.filter(list => list.key !== listKey);
+            this.dispatchEvent(new CustomEvent("list-deleted", {
+                detail: { deletedList: listKey },
+                bubbles: true,
+                composed: true
+            }));
+        }
+    }
+
     render() {
         return html`
         <div class="sidebar-top">
@@ -112,17 +172,42 @@ class SidebarElement extends LitElement {
             <div class="projects">
                 <ul class="list">
                     ${this.taskLists.map(({ key, label, icon }) => html`
-                        <li data-list=${key} @click=${this._handleListClick} class=${this.selectedList === key ? "selected" : ""}>
+                        <li data-list=${key} @click=${this._handleListClick} class=${this.selectedList == key ? "selected" : ""}>
                             <img src=${icon} alt=${label} /> 
                             ${label}
                         </li>
                     `)}
                 </ul>
                 <hr />
+                <div class="custom ${this.customLists.length > 0 ? "" : "hidden"}">
+                    <ul class="list">
+                        ${this.customLists.map(({ key, label }) => html`
+                            <li data-list=${key} @click=${this._handleListClick} class="custom-list ${this.selectedList === key ? "selected" : ""}">
+                                <div class="list-details">
+                                    <img src=${customList} alt=${label} /> 
+                                    ${label}
+                                </div>
+                                <img class=${this.selectedList === key ? "" : "hidden"} src=${deleteButton} alt="Delete" @click=${this._deleteList}>
+                            </li>
+                        `)}
+                    </ul>
+                </div>
+                <div class="new-input-box ${this._showInput ? "" : "hidden"}">
+                    <img src=${customList} alt="Add" />
+                    <input 
+                        type="text" 
+                        id="newInput" 
+                        placeholder="UntitledList" 
+                        @focus=${(e) => {e.target.select()}}
+                        @blur=${this._createNewList}
+                        @keydown=${this._createNewList}
+                        value="UntitledList"
+                    />
+                </div>
             </div>
         </div>
         <div class="sidebar-bottom">
-            <button class="new"><img src="${addButton}" alt="Add"/>New List</button>
+            <button class="new" @click="${this._handleNewListClick}"><img src="${addButton}" alt="Add"/>New List</button>
         </div>
         `
     }
