@@ -150,12 +150,11 @@ class SidebarElement extends LitElement {
     }
 
     _deleteList(event) {
+        event.stopPropagation();
         const listItem = event.target.closest("li");
         if (listItem) {
             const listKey = listItem.dataset.list;
-            if (this.selectedList === listKey) {
-                this.selectedList = "my-day";
-            }
+            this.selectedList = "my-day";
             this.customLists = this.customLists.filter(list => list.key !== listKey);
             this.dispatchEvent(new CustomEvent("list-deleted", {
                 detail: { deletedList: listKey },
@@ -199,7 +198,6 @@ class SidebarElement extends LitElement {
                         id="newInput" 
                         placeholder="UntitledList" 
                         @focus=${(e) => {e.target.select()}}
-                        @blur=${this._createNewList}
                         @keydown=${this._createNewList}
                         value="UntitledList"
                     />
