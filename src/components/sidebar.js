@@ -8,6 +8,23 @@ import addButton from "../assets/add.svg";
 
 class SidebarElement extends LitElement {
 
+    static properties = {
+        selectedList: { type: String },
+    }
+
+    constructor() {
+        super();
+        this.selectedList = "my-day";
+        this.taskLists = [
+            { key: "my-day", label: "My Day Tasks", icon: myDayTasks },
+            { key: "all", label: "All Tasks", icon: allTasks },
+            { key: "completed", label: "Completed Tasks", icon: completedTasks },
+            { key: "planned", label: "Planned Tasks", icon: plannedTasks },
+            { key: "important", label: "Important Tasks", icon: importantTasks }
+        ];
+
+    }
+
     static styles = css`
 
         :host {
@@ -22,9 +39,9 @@ class SidebarElement extends LitElement {
         .list {
             display: flex;
             flex-direction: column;
+            padding: 1rem 0;
             justify-content: center;
-            padding: 1rem 1rem;
-            gap: 20px;
+            gap: 10px;
         }
         ul {
             list-style: none;
@@ -34,7 +51,15 @@ class SidebarElement extends LitElement {
         li {
             display: flex;
             align-items: center;
+            padding: 0.5rem 1rem;
             gap: 12px;
+        }
+        li:hover, button:hover, .selected {
+            background-color: #343434;
+            cursor: pointer;
+        }
+        .selected {
+            border-left: 4px solid #007bff;
         }
         img {
             width: 24px;
@@ -67,17 +92,31 @@ class SidebarElement extends LitElement {
         }
     `;
 
+    _handleListClick(event) {
+        const list = event.target.closest("li");
+        if (list != undefined) {
+            this.selectedList = list.dataset.list;
+            console.log("Selected List:", this.selectedList);
+            this.dispatchEvent(new CustomEvent("list-selected", {
+                detail: { selectedList: this.selectedList },
+                bubbles: true,
+                composed: true
+            }));
+        }
+    }
+
     render() {
         return html`
         <div class="sidebar-top">
             <input type="text" placeholder="Search Lists..." />
             <div class="projects">
                 <ul class="list">
-                    <li><img src=${myDayTasks} alt="My Day Tasks" /> My Day Tasks</li>
-                    <li><img src=${allTasks} alt="All Tasks" /> All Tasks</li>
-                    <li><img src=${completedTasks} alt="Completed Tasks" /> Completed Tasks</li>
-                    <li><img src=${plannedTasks} alt="Planned Tasks" /> Planned Tasks</li>
-                    <li><img src=${importantTasks} alt="Important Tasks" /> Important Tasks</li>
+                    ${this.taskLists.map(({ key, label, icon }) => html`
+                        <li data-list=${key} @click=${this._handleListClick} class=${this.selectedList === key ? "selected" : ""}>
+                            <img src=${icon} alt=${label} /> 
+                            ${label}
+                        </li>
+                    `)}
                 </ul>
                 <hr />
             </div>
